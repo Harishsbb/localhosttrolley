@@ -2,7 +2,7 @@ from pymongo import MongoClient
 from datetime import datetime
 
 # Connect to MongoDB
-MONGO_URI = 'mongodb+srv://admin:harish123@cluster0.cfoj6si.mongodb.net/barcodedb?retryWrites=true&w=majority&appName=Cluster0'
+MONGO_URI = 'mongodb://localhost:27017/barcodedb'
 DB_NAME = 'barcodedb'
 
 client = MongoClient(MONGO_URI)
@@ -12,32 +12,40 @@ db = client[DB_NAME]
 db.products.drop()
 db.users.drop()
 db.purchase_history.drop()
+db.carts.drop()
 
 print("Connected to MongoDB. Seeding data...")
 
 # --- Products Data ---
 # Data extracted from user's MySQL dump
 products_data = [
-    {"barcodedata": "3010000012191", "product_name": "Maaza juice", "product_price": 60.00, "quantity": 0, "image": "/static/images/2.jpeg"},
-    {"barcodedata": "3010000018797", "product_name": "Maaza juice", "product_price": 60.00, "quantity": 0, "image": "/static/images/2.jpeg"},
-    {"barcodedata": "8901491101837", "product_name": "Lays", "product_price": 5.00, "quantity": 0, "image": "/static/images/1.jpeg"},
-    {"barcodedata": "6291007901047", "product_name": "Good Day biscuit", "product_price": 10.00, "quantity": 0, "image": "/static/images/4.jpeg"},
-    {"barcodedata": "6297001907047", "product_name": "Good Day biscuit", "product_price": 10.00, "quantity": 0, "image": "/static/images/4.jpeg"},
-    {"barcodedata": "8901063164291", "product_name": "Tiger biscuit", "product_price": 10.00, "quantity": 0, "image": "/static/images/3.jpeg"},
-    {"barcodedata": "8901063092716", "product_name": "Good Day biscuit", "product_price": 10.00, "quantity": 0, "image": "/static/images/4.jpeg"},
-    {"barcodedata": "8904043901015", "product_name": "Tata salt 1kg", "product_price": 25.00, "quantity": 0, "image": "/static/images/5.jpeg"},
-    {"barcodedata": "8906010261078", "product_name": "Gold winner sunflower oil 1L", "product_price": 190.00, "quantity": 0, "image": "/static/images/6.jpeg"},
-    {"barcodedata": "8901725132873", "product_name": "Dark Fantasy Choco Fills Luxuria", "product_price": 128.00, "quantity": 0, "image": "/static/images/7.jpeg"},
-    {"barcodedata": "8901725017927", "product_name": "Sunfeast YiPPee Family pack", "product_price": 153.00, "quantity": 0, "image": "/static/images/8.jpeg"},
-    {"barcodedata": "6001067021995", "product_name": "Colgate MaxFresh Toothpaste", "product_price": 72.00, "quantity": 0, "image": "/static/images/9.jpeg"},
-    {"barcodedata": "8901207027437", "product_name": "Dabur Honey - 1kg", "product_price": 391.00, "quantity": 0, "image": "/static/images/10.jpeg"},
-    {"barcodedata": "8901287400991", "product_name": "Mysore Sandal Soap 450g", "product_price": 232.00, "quantity": 0, "image": "/static/images/11.jpeg"},
-    {"barcodedata": "6161100950900", "product_name": "Harpic 1 Litre (Pack of 2)", "product_price": 396.00, "quantity": 0, "image": "/static/images/12.jpg"},
-    {"barcodedata": "8901088203630", "product_name": "Parachute Coconut Oil", "product_price": 126.00, "quantity": 0, "image": "/static/images/13.jpg"},
-    {"barcodedata": "8901399111013", "product_name": "Santoor Soap (Pack of 4)", "product_price": 163.00, "quantity": 0, "image": "/static/images/14.jpg"},
-    {"barcodedata": "8901030602983", "product_name": "Kellogg’s Choco Flakes 1kg", "product_price": 229.00, "quantity": 0, "image": "/static/images/23.jpeg"},
-    {"barcodedata": "8901399336812", "product_name": "Softouch 2X French Perfume 2L Fabric Conditioner", "product_price": 345.00, "quantity": 0, "image": "/static/images/24.jpeg"},
-    {"barcodedata": "8901063017221", "product_name": "Britannia 50-50 Maska Chaska 105g", "product_price": 28.00, "quantity": 0, "image": "/static/images/25.jpg"}
+    {"barcodedata": "3010000012191", "product_name": "Maaza juice", "product_price": 60.00, "quantity": 10, "image": "/static/images/2.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901491101837", "product_name": "Lays Chips", "product_price": 5.00, "quantity": 10, "image": "/static/images/1.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901063017221", "product_name": "Britannia 50-50 Maska Chaska 105g", "product_price": 28.00, "quantity": 10, "image": "/static/images/25.jpg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901399336812", "product_name": "Softouch 2X French Perfume 2L Fabric Conditioner", "product_price": 345.00, "quantity": 10, "image": "/static/images/24.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8906014903394", "product_name": "Kwality Choco Flakes 1kg", "product_price": 229.00, "quantity": 10, "image": "/static/images/23.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901030913211", "product_name": "Boost Chocolate Nutrition Drink Powder 750g", "product_price": 450.00, "quantity": 10, "image": "/static/images/22.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "7622201703011", "product_name": "Oreo Cadbury Chocolately Flavour crème Sandwich Biscuit, 288.75 Gram", "product_price": 80.00, "quantity": 10, "image": "/static/images/21.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "4987176206695", "product_name": "Ariel Matic Liquid Detergent 3.2 Ltr", "product_price": 890.00, "quantity": 10, "image": "/static/images/20.jpg", "barcode_type": "EAN_13"},
+    {"barcodedata": "7622202026621", "product_name": "Cadbury Bournvita Chocolate Nutriton Drink, 2 kg", "product_price": 780.00, "quantity": 10, "image": "/static/images/18.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8410104080204", "product_name": "Vanish 800ml", "product_price": 210.00, "quantity": 10, "image": "/static/images/17.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "6295120050040", "product_name": "Dettol Liquid Hand Wash, 675ml", "product_price": 185.00, "quantity": 10, "image": "/static/images/16.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901030602054", "product_name": "Surf Excel Detergent Powder - 5kg", "product_price": 950.00, "quantity": 10, "image": "/static/images/15.jpg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901399111013", "product_name": "Santoor Soap (Pack of 4)", "product_price": 163.00, "quantity": 10, "image": "/static/images/14.jpg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901088203630", "product_name": "Parachute Coconut Oil", "product_price": 126.00, "quantity": 10, "image": "/static/images/13.jpg", "barcode_type": "EAN_13"},
+    {"barcodedata": "6161100950900", "product_name": "Harpic 1 Litre (pack of 2)", "product_price": 396.00, "quantity": 10, "image": "/static/images/12.jpg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901207027437", "product_name": "Dabur Honey - 1Kg", "product_price": 391.00, "quantity": 10, "image": "/static/images/10.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901287400991", "product_name": "Mysore Sandal Soap, 450g", "product_price": 232.00, "quantity": 10, "image": "/static/images/11.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "6001067021995", "product_name": "Colgate MaxFresh ToothPaste", "product_price": 72.00, "quantity": 10, "image": "/static/images/9.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901725017927", "product_name": "Sunfeast yipee family pack", "product_price": 153.00, "quantity": 10, "image": "/static/images/8.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901725132873", "product_name": "Dark fantasy choco fills", "product_price": 128.00, "quantity": 10, "image": "/static/images/7.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8906010261078", "product_name": "gold winner sunflower oil 1 L", "product_price": 190.00, "quantity": 10, "image": "/static/images/6.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8904043901015", "product_name": "Tata Salt 1kg", "product_price": 25.00, "quantity": 10, "image": "/static/images/5.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901063092716", "product_name": "Goodday Biscuit", "product_price": 10.00, "quantity": 10, "image": "/static/images/4.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "8901063164291", "product_name": "Tiger biscuit", "product_price": 10.00, "quantity": 10, "image": "/static/images/3.jpeg", "barcode_type": "EAN_13"},
+    {"barcodedata": "40189384", "product_name": "Slice 1.75 L", "product_price": 95.00, "quantity": 10, "image": "/static/images/2.jpeg", "barcode_type": "EAN_8"},
+    {"barcodedata": "028400199148", "product_name": "lays potato chips, classic, 8 oz", "product_price": 5.00, "quantity": 10, "image": "/static/images/1.jpeg", "barcode_type": "UPC_A"},
+    {"barcodedata": "8901207046070", "product_name": "Dabur Red Toothpaste - 800g (200gx4)", "product_price": 250.00, "quantity": 10, "image": "/static/images/19.jpeg", "barcode_type": "EAN_13"}
 ]
 
 db.products.insert_many(products_data)

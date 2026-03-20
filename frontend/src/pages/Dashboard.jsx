@@ -24,10 +24,10 @@ ChartJS.register(
 
 const Dashboard = () => {
     const [products, setProducts] = useState([]);
-    const [formData, setFormData] = useState({ name: '', price: '', qty: '', imageUrl: '', category: 'Snacks', barcode: '' });
+    const [formData, setFormData] = useState({ name: '', price: '', qty: '', imageUrl: '', category: 'Snacks', barcode: '', barcode_type: 'EAN_13' });
     const [removeName, setRemoveName] = useState('');
     const [loading, setLoading] = useState(true);
-    const [editingProduct, setEditingProduct] = useState(null); // { id, name, price, barcode, image, category }
+    const [editingProduct, setEditingProduct] = useState(null); // { id, name, price, barcode, barcode_type, image, category }
 
     // Helper: Auto-categorize based on name if category is missing
     const getCategory = (p) => {
@@ -77,6 +77,15 @@ const Dashboard = () => {
         'Others'
     ];
 
+    const BARCODE_TYPES = [
+        'EAN_13',
+        'EAN_8',
+        'UPC_A',
+        'UPC_E',
+        'CODE_128',
+        'QR_CODE'
+    ];
+
     const fetchStock = async (isBackground = false) => {
         if (!isBackground) setLoading(true);
         try {
@@ -113,7 +122,7 @@ const Dashboard = () => {
         };
 
         setProducts(prev => [newProd, ...prev]);
-        setFormData({ name: '', price: '', qty: '', imageUrl: '', category: 'Snacks', barcode: '' });
+        setFormData({ name: '', price: '', qty: '', imageUrl: '', category: 'Snacks', barcode: '', barcode_type: 'EAN_13' });
 
         try {
             await axios.post('/api/product/add', {
@@ -122,7 +131,8 @@ const Dashboard = () => {
                 barcode: newProd.barcodedata,
                 image_url: formData.imageUrl,
                 quantity: newProd.quantity,
-                category: newProd.category
+                category: newProd.category,
+                barcode_type: formData.barcode_type
             });
             // Silent refresh to get real ID/data
             fetchStock(true);
@@ -246,6 +256,7 @@ const Dashboard = () => {
             name: p.product_name || p.name,
             price: p.product_price || p.price,
             barcode: p.barcodedata,
+            barcode_type: p.barcode_type || 'EAN_13',
             image: p.image,
             category: p.category || getCategory(p) || 'Snacks'
         });
@@ -260,6 +271,7 @@ const Dashboard = () => {
             product_name: editingProduct.name,
             product_price: parseFloat(editingProduct.price),
             barcodedata: editingProduct.barcode,
+            barcode_type: editingProduct.barcode_type,
             image: editingProduct.image,
             category: editingProduct.category,
             // Preserve existing fields we aren't editing
@@ -275,6 +287,7 @@ const Dashboard = () => {
                 name: editingProduct.name,
                 price: editingProduct.price,
                 barcode: editingProduct.barcode,
+                barcode_type: editingProduct.barcode_type,
                 image: editingProduct.image,
                 category: editingProduct.category
             });
@@ -379,15 +392,29 @@ const Dashboard = () => {
                                 />
                             </div>
 
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Barcode (Optional)</label>
-                                <input
-                                    type="text"
-                                    placeholder="Scan or enter barcode"
-                                    style={{ padding: '10px 14px', borderRadius: '8px', fontSize: '0.95rem', border: '1px solid #cbd5e1', width: '100%', outline: 'none' }}
-                                    value={formData.barcode}
-                                    onChange={e => setFormData({ ...formData, barcode: e.target.value })}
-                                />
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Barcode (Optional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Scan or enter barcode"
+                                        style={{ padding: '10px 14px', borderRadius: '8px', fontSize: '0.95rem', border: '1px solid #cbd5e1', width: '100%', outline: 'none' }}
+                                        value={formData.barcode}
+                                        onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Type</label>
+                                    <select
+                                        value={formData.barcode_type}
+                                        onChange={e => setFormData({ ...formData, barcode_type: e.target.value })}
+                                        style={{ padding: '10px 14px', borderRadius: '8px', fontSize: '0.95rem', border: '1px solid #cbd5e1', width: '100%', outline: 'none', background: 'white', color: '#1e293b' }}
+                                    >
+                                        {BARCODE_TYPES.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) 2fr', gap: '16px' }}>
@@ -713,13 +740,27 @@ const Dashboard = () => {
                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                 />
                             </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#64748b' }}>Barcode</label>
-                                <input
-                                    value={editingProduct.barcode}
-                                    onChange={e => setEditingProduct({ ...editingProduct, barcode: e.target.value })}
-                                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                                />
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#64748b' }}>Barcode</label>
+                                    <input
+                                        value={editingProduct.barcode}
+                                        onChange={e => setEditingProduct({ ...editingProduct, barcode: e.target.value })}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#64748b' }}>Type</label>
+                                    <select
+                                        value={editingProduct.barcode_type}
+                                        onChange={e => setEditingProduct({ ...editingProduct, barcode_type: e.target.value })}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }}
+                                    >
+                                        {BARCODE_TYPES.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                                 <button type="button" onClick={() => setEditingProduct(null)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#f1f5f9', color: '#64748b', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>

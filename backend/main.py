@@ -21,8 +21,15 @@ app.config['SESSION_COOKIE_SECURE'] = True # Required for SameSite=None
 CORS(app, supports_credentials=True, origins=["http://localhost:5173", "https://snapshop-web.vercel.app", "https://trolley-frontend-lemon.vercel.app", "https://trolley-frontend.vercel.app"])
 
 # MongoDB configuration
-MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb+srv://admin:harish123@cluster0.cfoj6si.mongodb.net/barcodedb?retryWrites=true&w=majority&appName=Cluster0'
+MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://localhost:27017/barcodedb'
 DB_NAME = 'barcodedb'
+
+@app.after_request
+def add_header(response):
+    # Set Cache-Control for all JSON responses to prevent stale image data in frontend
+    if response.content_type == 'application/json':
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
 
 # --- Utility Function for Database Connection ---
 def get_db():
@@ -35,7 +42,7 @@ def get_db():
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return jsonify({"status": "SnapShop API is running", "environment": "Vercel"})
+    return jsonify({"status": "SnapShop API is running", "environment": "Local"})
 
 # --- Cart Helper Functions ---
 def get_cart_for_user():
@@ -260,6 +267,7 @@ def edit_product():
     if 'price' in data: update_fields['product_price'] = data['price']
     if 'image' in data: update_fields['image'] = data['image']
     if 'barcode' in data: update_fields['barcodedata'] = data['barcode']
+    if 'barcode_type' in data: update_fields['barcode_type'] = data['barcode_type']
     if 'category' in data: update_fields['category'] = data['category']
     
     try:
@@ -406,7 +414,8 @@ def add_product():
         "product_price": price,
         "quantity": qty,
         "image": image or "/static/images/placeholder.svg",
-        "category": category
+        "category": category,
+        "barcode_type": data.get('barcode_type', 'EAN_13')
     }
     
     db.products.insert_one(new_product)
