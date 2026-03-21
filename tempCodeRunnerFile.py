@@ -698,7 +698,7 @@ def generate_qr_code():
     finally:
         lock.release()
         
-    payment_url = f"upi://pay?pa=bavaharishkumar-2@okicici&pn=VS STORES&am={amount:.2f}&cu=INR&mode=02"
+    payment_url = f"upi://pay?pa=bavaharishkumar-9@okaxis&pn=VS STORES&am={amount:.2f}&cu=INR&mode=02"
     
     qr = qrcode.QRCode(
         version=1,
