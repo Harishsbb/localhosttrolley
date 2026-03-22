@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 # Connect to MongoDB
-MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb+srv://admin:harish123@cluster0.cfoj6si.mongodb.net/barcodedb?retryWrites=true&w=majority&appName=Cluster0'
+MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://localhost:27017/barcodedb'
 DB_NAME = 'barcodedb'
 
 try:
