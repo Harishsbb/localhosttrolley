@@ -81,7 +81,7 @@ def update_cart_in_db(products, total_price):
 
 # --- Routes ---
 
-@app.route('/scan-item', methods=['POST'])
+@app.route('/api/scan-item', methods=['POST'])
 def scan_item():
     """API endpoint to handle barcode scan from frontend."""
     if 'username' not in session:
@@ -97,6 +97,34 @@ def scan_item():
          return jsonify({"status": "error", "message": "Product not found"})
     
     try:
+        # Fetch Special Offers from Database
+        db = get_db()
+        offers_cursor = db.offers.find({})
+        DYNAMIC_OFFERS = {}
+        for off in offers_cursor:
+            # Map lowercase product name to offer details
+            DYNAMIC_OFFERS[off['product_name'].lower()] = {
+                "type": off.get('offer_type', 'pct'),
+                "value": float(off.get('offer_value', 0))
+            }
+
+        # Calculate Applied Price
+        original_price = float(product.get('product_price', 0))
+        final_price = original_price
+        applied_offer = None
+
+        # Robust normalization: remove extra spaces and lowercase
+        p_name_norm = " ".join(product['product_name'].lower().split())
+        
+        for key, offer in DYNAMIC_OFFERS.items():
+            if key in p_name_norm:
+                if offer['type'] == "pct":
+                    final_price = original_price * (1 - offer['value'] / 100)
+                elif offer['type'] == "flat":
+                    final_price = max(0, original_price - offer['value'])
+                applied_offer = key
+                break
+
         # Get current cart
         cart = get_cart_for_user()
         current_products = cart.get('products', [])
@@ -106,24 +134,25 @@ def scan_item():
         for p in current_products:
             if p['name'] == product['product_name']:
                 p['quantity'] += 1
+                # Update price and offer status in case it was added before the offer was active
+                p['price'] = final_price
+                p['original_price'] = original_price
+                p['on_offer'] = bool(applied_offer)
                 found = True
                 break
                 
         if not found:
-            try:
-                price = float(product['product_price'])
-            except (ValueError, TypeError):
-                print(f"Price conversion error for {product['product_name']}: {product['product_price']}")
-                price = 0.0 # Fallback
-                
             current_products.append({
                 "name": product['product_name'],
-                "price": price,
+                "price": final_price,
+                "original_price": original_price,
                 "quantity": 1,
-                "image": product.get('image', '/static/images/placeholder.svg')
+                "image": product.get('image', '/static/images/placeholder.svg'),
+                "on_offer": bool(applied_offer)
             })
             
         # Recalculate total
+        # Note: We use the already-discounted p['price']
         total_price = sum(float(p['price']) * int(p['quantity']) for p in current_products)
         
         # Save back to DB
@@ -141,13 +170,13 @@ def scan_item():
         print(f"CRITICAL ERROR in scan_item: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/get-scanned-items', methods=['GET'])
+@app.route('/api/get-scanned-items', methods=['GET'])
 def get_scanned_items():
     """Returns the user's cart."""
     cart = get_cart_for_user()
     return jsonify({"products": cart.get('products', []), "total_prize": cart.get('total_price', 0.0)})
 
-@app.route('/remove-item', methods=['POST'])
+@app.route('/api/remove-item', methods=['POST'])
 def remove_item():
     if 'username' not in session: return jsonify({"status": "error"}), 401
     
@@ -188,14 +217,68 @@ def remove_item():
         print(f"Remove error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/start', methods=['POST'])
+@app.route('/api/save-history', methods=['POST'])
+def save_history():
+    """Archives current cart into purchase_history and clears the cart."""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "Not logged in"}), 401
+    
+    username = session['username']
+    db = get_db()
+    
+    # 1. Get current cart
+    cart = db.carts.find_one({"username": username})
+    if not cart or not cart.get('products'):
+        return jsonify({"status": "error", "message": "Cart is empty"}), 400
+        
+    # 2. Archive to history
+    history_entry = {
+        "username": username,
+        "date": datetime.now(),
+        "total_price": cart.get("total_price", 0.0),
+        "items": cart.get("products", [])
+    }
+    
+    try:
+        db.purchase_history.insert_one(history_entry)
+        
+        # 3. Clear current cart
+        db.carts.delete_one({"username": username})
+        
+        return jsonify({"status": "success", "message": "Purchase saved to history!"})
+    except Exception as e:
+        print(f"Error saving history: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/get-history', methods=['GET'])
+def get_history():
+    """Returns the user's purchase history."""
+    if 'username' not in session:
+        return jsonify({"status": "error"}), 401
+        
+    username = session['username']
+    db = get_db()
+    
+    history_cursor = db.purchase_history.find({"username": username}).sort("date", -1)
+    results = []
+    for h in history_cursor:
+        results.append({
+            "id": str(h["_id"]),
+            "date": h["date"].strftime("%Y-%m-%d %H:%M"),
+            "total_price": h.get("total_price", 0.0),
+            "item_count": len(h.get("items", [])),
+            "items": h.get("items", [])
+        })
+    return jsonify(results)
+
+@app.route('/api/start', methods=['POST'])
 def start_scanning():
     # Only useful if we want to CLEAR the cart
     if 'username' in session:
          update_cart_in_db([], 0.0)
     return jsonify({"status": "Cart cleared"})
 
-@app.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json() if request.is_json else request.form
     username = data.get('username')
@@ -214,12 +297,12 @@ def login():
     else:
         return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
-@app.route('/logout', methods=['POST'])
+@app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({"status": "success", "message": "Logged out"})
 
-@app.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json() if request.is_json else request.form
     username = data.get('username')
@@ -278,7 +361,7 @@ def edit_product():
         print(f"Edit error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/search', methods=['GET'])
+@app.route('/api/search', methods=['GET'])
 def search():
     query = request.args.get('query', '').strip()
     db = get_db()
@@ -357,22 +440,79 @@ def search():
     
     return jsonify(final_results)
 
-@app.route('/recommended', methods=['GET'])
+@app.route('/api/recommended', methods=['GET'])
 def recommended():
     db = get_db()
-    if db is not None:
-        pipeline = [{"$sample": {"size": 5}}]
-        products_db = list(db.products.aggregate(pipeline))
-        result = []
-        for p in products_db:
-             result.append({
+    if db is None: return jsonify([])
+
+    # 1. Get current cart AND past history
+    cart = get_cart_for_user()
+    scanned_names = [p['name'] for p in cart.get('products', [])]
+    
+    # Peek into the last 3 history entries for context
+    history_cursor = db.purchase_history.find({"username": session.get('username')}).sort("date", -1).limit(3)
+    history_names = []
+    for entry in history_cursor:
+        for item in entry.get('items', []):
+            history_names.append(item.get('name', ''))
+            
+    # Combine for analysis context
+    all_context_names = list(set(scanned_names + history_names))
+    
+    # 2. Fetch all available products
+    all_products = list(db.products.find({}))
+    
+    # 3. Filter out items in the CURRENT cart OR out of stock
+    available_pool = [
+        p for p in all_products 
+        if p.get('product_name') not in scanned_names and int(p.get('quantity', 0)) > 0
+    ]
+    
+    # 4. Define Smart Ranking (Heuristics based on context)
+    recommendations = []
+    suggested_targets = []
+    
+    context_text = " ".join(all_context_names).lower()
+    
+    # Category Analysis & Complementary Logic
+    if "toothpaste" in context_text or "colgate" in context_text:
+        suggested_targets.extend(["Santoor Soap (Pack of 4)", "Dettol Liquid Hand Wash, 675ml"])
+    if "detergent" in context_text or "conditioner" in context_text or "ariel" in context_text:
+        suggested_targets.extend(["Vanish 800ml", "Harpic 1 Litre (pack of 2)", "Surf Excel Detergent Powder - 5kg"])
+    if "boost" in context_text or "bournvita" in context_text or "drink" in context_text:
+        suggested_targets.extend(["Goodday Biscuit", "Dark fantasy choco fills", "Britannia 50-50 Maska Chaska 105g", "Oreo Cadbury Chocolately Flavour crème Sandwich Biscuit, 288.75 Gram"])
+    if "juice" in context_text or "slice" in context_text or "maaza" in context_text:
+        suggested_targets.extend(["Lays Chips", "lays potato chips, classic, 8 oz", "Sunfeast yipee family pack"])
+
+    # First pass: Add priority complements
+    for target in suggested_targets:
+        for p in available_pool:
+            if p.get('product_name') == target and p.get('product_name') not in [r['name'] for r in recommendations]:
+                recommendations.append({
+                    "id": str(p.get("_id")),
+                    "name": p.get("product_name"),
+                    "price": p.get("product_price"),
+                    "image": p.get("image", "/static/images/placeholder.svg"),
+                    "category": p.get("category", "")
+                })
+                break
+    
+    # Second pass: Fill to exactly 5 using other available products
+    if len(recommendations) < 5:
+        remaining_pool = [p for p in available_pool if p.get('product_name') not in [r['name'] for r in recommendations]]
+        random.shuffle(remaining_pool)
+        for i in range(min(5 - len(recommendations), len(remaining_pool))):
+            p = remaining_pool[i]
+            recommendations.append({
+                "id": str(p.get("_id")),
                 "name": p.get("product_name"),
                 "price": p.get("product_price"),
                 "image": p.get("image", "/static/images/placeholder.svg"),
                 "category": p.get("category", "")
             })
-        return jsonify(result)
-    return jsonify([])
+
+    # Ensure result is exactly 5
+    return jsonify(recommendations[:5])
 
 # --- Vercel requires app to be exported as 'app' or 'application' ---
 
@@ -462,6 +602,117 @@ def remove_product():
         return jsonify({"status": "Product removed successfully"})
     else:
         return jsonify({"status": "Product not found"})
+
+@app.route('/api/offers', methods=['GET'])
+def get_offers():
+    db = get_db()
+    offers_cursor = db.offers.find({})
+    offers_data = []
+    for o in offers_cursor:
+        o['_id'] = str(o['_id'])
+        offers_data.append(o)
+    return jsonify(offers_data)
+
+@app.route('/api/offer/add', methods=['POST'])
+def add_offer():
+    if 'username' not in session or session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    data = request.json
+    db = get_db()
+    
+    image = data.get('image')
+    product_name = data.get('product_name')
+
+    # Auto-find image from product if not provided or placeholder
+    if (not image or 'placeholder.svg' in image) and product_name:
+        import re
+        # Escape then make space more flexible
+        escaped_name = re.escape(product_name).replace(r'\ ', '.*')
+        prod = db.products.find_one({"product_name": {"$regex": f"^{escaped_name}", "$options": "i"}})
+        
+        if not prod:
+            # Try splitting by commas/spaces for common prefix
+            prefix = product_name.split(',')[0].split(' ')[0]
+            prod = db.products.find_one({"product_name": {"$regex": f"{prefix}", "$options": "i"}})
+            
+        if prod and 'image' in prod:
+            image = prod['image']
+            if image.startswith('static/'): image = '/' + image
+
+    new_offer = {
+        "title": data.get('title'),
+        "product_name": product_name,
+        "image": image or 'https://placehold.co/400x400/f1f5f9/94a3b8.png?text=Offer',
+        "discount_label": data.get('discount_label'),
+        "tagline": data.get('tagline'),
+        "color": data.get('color', '#6366f1'),
+        "offer_type": data.get('offer_type', 'pct'),
+        "offer_value": float(data.get('offer_value', 0))
+    }
+    
+    db.offers.insert_one(new_offer)
+    return jsonify({"status": "success", "message": "Offer added successfully"})
+
+@app.route('/api/offer/edit', methods=['POST'])
+def edit_offer():
+    if 'username' not in session or session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    data = request.json
+    o_id = data.get('id')
+    
+    if not o_id:
+        return jsonify({"status": "error", "message": "Offer ID required"}), 400
+
+    update_fields = {}
+    if 'title' in data: update_fields['title'] = data['title']
+    if 'product_name' in data: update_fields['product_name'] = data['product_name']
+    
+    # If image is cleared or looks like a placeholder, try auto-finding
+    img = data.get('image', '').strip()
+    p_name = data.get('product_name')
+    
+    if (not img or 'placeholder.svg' in img) and p_name:
+        import re
+        escaped_name = re.escape(p_name).replace(r'\ ', '.*')
+        prod = db.products.find_one({"product_name": {"$regex": f"^{escaped_name}", "$options": "i"}})
+        if prod and 'image' in prod:
+            img = prod['image']
+            if img.startswith('static/'): img = '/' + img
+            
+    if 'image' in data: update_fields['image'] = img
+    if 'discount_label' in data: update_fields['discount_label'] = data['discount_label']
+    if 'tagline' in data: update_fields['tagline'] = data['tagline']
+    if 'color' in data: update_fields['color'] = data['color']
+    if 'offer_type' in data: update_fields['offer_type'] = data['offer_type']
+    if 'offer_value' in data: update_fields['offer_value'] = float(data.get('offer_value', 0))
+    
+    try:
+        db = get_db()
+        db.offers.update_one({'_id': ObjectId(o_id)}, {'$set': update_fields})
+        return jsonify({"status": "success", "message": "Offer updated"})
+    except Exception as e:
+        print(f"Edit offer error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/offer/remove', methods=['POST'])
+def remove_offer():
+    if 'username' not in session or session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    data = request.json
+    o_id = data.get('id')
+    
+    db = get_db()
+    try:
+        result = db.offers.delete_one({'_id': ObjectId(o_id)})
+        if result.deleted_count > 0:
+            return jsonify({"status": "success", "message": "Offer removed successfully"})
+        else:
+            return jsonify({"status": "error", "message": "Offer not found"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     # usage_reloader=False prevents the "WinError 10038" socket error on Windows
