@@ -1,0 +1,137 @@
+[
+    {
+        "_id": "69bbf2ece1c5dcac526b0058",
+        "product_name": "Maaza juice",
+        "image": "/static/images/slice.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0059",
+        "product_name": "Lays Chips",
+        "image": "/static/images/lays.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b005a",
+        "product_name": "Britannia 50-50 Maska Chaska 105g",
+        "image": "/static/images/50 50 maska chaska.jpg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b005b",
+        "product_name": "Softouch 2X French Perfume 2L Fabric Conditioner",
+        "image": "/static/images/softouch fabric conditiner.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b005c",
+        "product_name": "Kwality Choco Flakes 1kg",
+        "image": "/static/images/choco flakes.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b005d",
+        "product_name": "Boost Chocolate Nutrition Drink Powder 750g",
+        "image": "/static/images/boost.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b005e",
+        "product_name": "Oreo Cadbury Chocolately Flavour cr\u00e8me Sandwich Biscuit, 288.75 Gram",
+        "image": "/static/images/oreo.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b005f",
+        "product_name": "Ariel Matic Liquid Detergent 3.2 Ltr",
+        "image": "/static/images/ariel matic liquid detergent.jpg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0060",
+        "product_name": "Cadbury Bournvita Chocolate Nutriton Drink, 2 kg",
+        "image": "/static/images/bourn vita.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0061",
+        "product_name": "Vanish 800ml",
+        "image": "/static/images/vanish.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0062",
+        "product_name": "Dettol Liquid Hand Wash, 675ml",
+        "image": "/static/images/dettol.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0063",
+        "product_name": "Surf Excel Detergent Powder - 5kg",
+        "image": "/static/images/surf excel washing powder.jpg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0064",
+        "product_name": "Santoor Soap (Pack of 4)",
+        "image": "/static/images/santoor soap.jpg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0065",
+        "product_name": "Parachute Coconut Oil",
+        "image": "/static/images/parachute oil.jpg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0066",
+        "product_name": "Harpic 1 Litre (pack of 2)",
+        "image": "/static/images/harpic.jpg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0067",
+        "product_name": "Dabur Honey - 1Kg",
+        "image": "/static/images/dabur honey.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0068",
+        "product_name": "Mysore Sandal Soap, 450g",
+        "image": "/static/images/mysore sandal soap.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0069",
+        "product_name": "Colgate MaxFresh ToothPaste",
+        "image": "/static/images/colgate maxfresh.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b006a",
+        "product_name": "Sunfeast yipee family pack",
+        "image": "/static/images/yippee noodles.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b006b",
+        "product_name": "Dark fantasy choco fills",
+        "image": "/static/images/dark fantasy.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b006c",
+        "product_name": "gold winner sunflower oil 1 L",
+        "image": "/static/images/gold winner.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b006d",
+        "product_name": "Tata Salt 1kg",
+        "image": "/static/images/tata salt.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b006e",
+        "product_name": "Goodday Biscuit",
+        "image": "/static/images/good day.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b006f",
+        "product_name": "Tiger biscuit",
+        "image": "/static/images/tiger krunch.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0070",
+        "product_name": "Slice 1.75 L",
+        "image": "/static/images/slice.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0071",
+        "product_name": "lays potato chips, classic, 8 oz",
+        "image": "/static/images/lays.jpeg"
+    },
+    {
+        "_id": "69bbf2ece1c5dcac526b0072",
+        "product_name": "Dabur Red Toothpaste - 800g (200gx4)",
+        "image": "/static/images/dabur red paste.jpeg"
+    }
+]
