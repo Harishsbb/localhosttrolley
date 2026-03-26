@@ -230,6 +230,7 @@ const Scanner = () => {
         let isMounted = true;
 
         if (scanning) {
+            window.dispatchEvent(new CustomEvent('scanning-status', { detail: true }));
             const startScanner = async () => {
                 try {
                     // Safety check: make sure any previous instance is dead
@@ -278,6 +279,7 @@ const Scanner = () => {
         // Cleanup function for unmount or dependency change
         return () => {
             isMounted = false;
+            window.dispatchEvent(new CustomEvent('scanning-status', { detail: false }));
             // logic moved to stopScanner, but we can't await in cleanup.
             // Best effort stop if component unmounts while scanning.
             if (scannerRef.current) {
