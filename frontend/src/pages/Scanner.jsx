@@ -559,11 +559,45 @@ const Scanner = () => {
                             to={`/product/${rec.id}`} 
                             key={i} 
                             className="product-card" 
-                            style={{ minWidth: '200px', padding: '10px', textDecoration: 'none', color: 'inherit' }}
+                            style={{ 
+                                minWidth: '220px', 
+                                padding: '16px', 
+                                textDecoration: 'none', 
+                                color: 'inherit',
+                                position: 'relative',
+                                background: 'white',
+                                borderRadius: '16px',
+                                border: '1px solid #f1f5f9',
+                                transition: 'transform 0.2s',
+                                cursor: 'pointer'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                         >
-                            <img src={rec.image} style={{ width: '100%', height: '120px', objectFit: 'contain' }} alt={rec.name} />
-                            <h5 style={{ margin: '10px 0 5px', fontSize: '14px' }}>{rec.name}</h5>
-                            <div style={{ fontWeight: 'bold', color: '#e74c3c' }}>₹{rec.price}</div>
+                            {rec.reason && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '10px',
+                                    right: '10px',
+                                    background: rec.reason === 'Top Choice' ? '#4f46e5' : '#10b981',
+                                    color: 'white',
+                                    fontSize: '0.65rem',
+                                    padding: '4px 8px',
+                                    borderRadius: '50px',
+                                    fontWeight: '800',
+                                    zIndex: 2,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.02em',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                }}>
+                                    {rec.reason}
+                                </div>
+                            )}
+                            <div style={{ width: '100%', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                                <img src={rec.image} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt={rec.name} />
+                            </div>
+                            <h5 style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: '700', color: '#1e293b', lineHeight: '1.4' }}>{rec.name}</h5>
+                            <div style={{ fontWeight: '800', color: '#ef4444', fontSize: '1.1rem' }}>₹{rec.price}</div>
                         </Link>
                     ))}
                 </div>

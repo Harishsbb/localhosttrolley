@@ -445,63 +445,92 @@ def recommended():
     db = get_db()
     if db is None: return jsonify([])
 
-    # 1. Get current cart AND past history
+    username = session.get('username')
+    
+    # 1. Get current cart for exclusion
     cart = get_cart_for_user()
     scanned_names = [p['name'] for p in cart.get('products', [])]
     
-    # Peek into the last 3 history entries for context
-    history_cursor = db.purchase_history.find({"username": session.get('username')}).sort("date", -1).limit(3)
-    history_names = []
-    for entry in history_cursor:
-        for item in entry.get('items', []):
-            history_names.append(item.get('name', ''))
-            
-    # Combine for analysis context
-    all_context_names = list(set(scanned_names + history_names))
+    # 2. Analyze Full Purchase History
+    from collections import Counter
+    all_history_names = []
     
-    # 2. Fetch all available products
+    if username:
+        # Fetch all past purchases for this specific user
+        history_cursor = db.purchase_history.find({"username": username})
+        for entry in history_cursor:
+            for item in entry.get('items', []):
+                all_history_names.append(item.get('name', ''))
+    
+    # Calculate Frequency
+    frequency_map = Counter(all_history_names)
+    # Get top 10 most frequent items
+    top_frequent = [item for item, count in frequency_map.most_common(10)]
+    
+    # Context for complementary suggestions
+    context_text = " ".join(scanned_names + all_history_names).lower()
+    
+    # 3. Fetch all available products
     all_products = list(db.products.find({}))
     
-    # 3. Filter out items in the CURRENT cart OR out of stock
+    # 4. Filter Available Pool (Available & Not in cart)
     available_pool = [
         p for p in all_products 
         if p.get('product_name') not in scanned_names and int(p.get('quantity', 0)) > 0
     ]
     
-    # 4. Define Smart Ranking (Heuristics based on context)
     recommendations = []
-    suggested_targets = []
-    
-    context_text = " ".join(all_context_names).lower()
-    
-    # Category Analysis & Complementary Logic
-    if "toothpaste" in context_text or "colgate" in context_text:
-        suggested_targets.extend(["Santoor Soap (Pack of 4)", "Dettol Liquid Hand Wash, 675ml"])
-    if "detergent" in context_text or "conditioner" in context_text or "ariel" in context_text:
-        suggested_targets.extend(["Vanish 800ml", "Harpic 1 Litre (pack of 2)", "Surf Excel Detergent Powder - 5kg"])
-    if "boost" in context_text or "bournvita" in context_text or "drink" in context_text:
-        suggested_targets.extend(["Goodday Biscuit", "Dark fantasy choco fills", "Britannia 50-50 Maska Chaska 105g", "Oreo Cadbury Chocolately Flavour crème Sandwich Biscuit, 288.75 Gram"])
-    if "juice" in context_text or "slice" in context_text or "maaza" in context_text:
-        suggested_targets.extend(["Lays Chips", "lays potato chips, classic, 8 oz", "Sunfeast yipee family pack"])
+    suggested_names = set()
 
-    # First pass: Add priority complements
-    for target in suggested_targets:
+    # --- Pass 1: "Because You Often Buy" (Frequency Based) ---
+    for item_name in top_frequent:
+        if len(recommendations) >= 4: break
         for p in available_pool:
-            if p.get('product_name') == target and p.get('product_name') not in [r['name'] for r in recommendations]:
+            if p.get('product_name') == item_name and item_name not in suggested_names:
                 recommendations.append({
                     "id": str(p.get("_id")),
                     "name": p.get("product_name"),
                     "price": p.get("product_price"),
                     "image": p.get("image", "/static/images/placeholder.svg"),
-                    "category": p.get("category", "")
+                    "category": p.get("category", ""),
+                    "reason": "Top Choice" # Tag for UI if needed
                 })
+                suggested_names.add(item_name)
                 break
-    
-    # Second pass: Fill to exactly 5 using other available products
-    if len(recommendations) < 5:
-        remaining_pool = [p for p in available_pool if p.get('product_name') not in [r['name'] for r in recommendations]]
+
+    # --- Pass 2: Smart Complementary Logic (Heuristic Based) ---
+    complementary_targets = []
+    if any(k in context_text for k in ["toothpaste", "colgate", "oral-b"]):
+        complementary_targets.extend(["Santoor Soap (Pack of 4)", "Dettol Liquid Hand Wash, 675ml", "Listerine Mouthwash"])
+    if any(k in context_text for k in ["detergent", "conditioner", "ariel", "surf excel", "tide"]):
+        complementary_targets.extend(["Vanish 800ml", "Harpic 1 Litre (pack of 2)", "Comfort Fabric Conditioner"])
+    if any(k in context_text for k in ["boost", "bournvita", "horlicks", "milo", "drink", "powder"]):
+        complementary_targets.extend(["Goodday Biscuit", "Dark fantasy choco fills", "Marie Gold Biscuit", "Oreo Cadbury Chocolately Flavour crème Sandwich Biscuit, 288.75 Gram"])
+    if any(k in context_text for k in ["juice", "slice", "maaza", "paper boat", "coke", "pepsi", "sprite"]):
+        complementary_targets.extend(["Lays Chips", "lays potato chips, classic, 8 oz", "Sunfeast yipee family pack", "Kurkure Masala Munch"])
+    if any(k in context_text for k in ["oil", "ghee", "salt", "sugar", "atta", "rice"]):
+        complementary_targets.extend(["Tata Salt 1kg", "Fortune Sunflower Oil", "Aashirvaad Atta 5kg", "India Gate Basmati Rice"])
+
+    for target in complementary_targets:
+        if len(recommendations) >= 8: break # Recommend up to 8 items for a nice grid
+        for p in available_pool:
+            if target.lower() in p.get('product_name', '').lower() and p.get('product_name') not in suggested_names:
+                recommendations.append({
+                    "id": str(p.get("_id")),
+                    "name": p.get("product_name"),
+                    "price": p.get("product_price"),
+                    "image": p.get("image", "/static/images/placeholder.svg"),
+                    "category": p.get("category", ""),
+                    "reason": "Goes well with your picks"
+                })
+                suggested_names.add(p.get('product_name'))
+                break
+
+    # --- Pass 3: General Popularity / Discovery (Fillers) ---
+    if len(recommendations) < 6:
+        remaining_pool = [p for p in available_pool if p.get('product_name') not in suggested_names]
         random.shuffle(remaining_pool)
-        for i in range(min(5 - len(recommendations), len(remaining_pool))):
+        for i in range(min(8 - len(recommendations), len(remaining_pool))):
             p = remaining_pool[i]
             recommendations.append({
                 "id": str(p.get("_id")),
@@ -511,8 +540,8 @@ def recommended():
                 "category": p.get("category", "")
             })
 
-    # Ensure result is exactly 5
-    return jsonify(recommendations[:5])
+    # Return results
+    return jsonify(recommendations)
 
 # --- Vercel requires app to be exported as 'app' or 'application' ---
 
@@ -603,14 +632,37 @@ def remove_product():
     else:
         return jsonify({"status": "Product not found"})
 
+@app.route('/api/get-offers', methods=['GET']) # Changed name for clarity or keep same
 @app.route('/api/offers', methods=['GET'])
 def get_offers():
     db = get_db()
+    if db is None: return jsonify([])
+    
+    username = session.get('username')
+    history_products = []
+    if username:
+        # Get all products ever bought by user for personalization
+        history_cursor = db.purchase_history.find({"username": username}, {"items.name": 1})
+        for h in history_cursor:
+            for item in h.get('items', []):
+                history_products.append(item.get('name', '').lower())
+
     offers_cursor = db.offers.find({})
     offers_data = []
     for o in offers_cursor:
         o['_id'] = str(o['_id'])
+        
+        # Tag as personalized if it's in their history
+        prod_name = o.get('product_name', '').lower()
+        if prod_name in history_products:
+            o['personalized'] = True
+            o['title'] = f"For You: {o.get('title', 'Special Offer')}"
+            
         offers_data.append(o)
+        
+    # Sort: Personalized offers first
+    offers_data.sort(key=lambda x: x.get('personalized', False), reverse=True)
+    
     return jsonify(offers_data)
 
 @app.route('/api/offer/add', methods=['POST'])
