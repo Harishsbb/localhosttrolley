@@ -27,6 +27,7 @@ const Login = () => {
                 const role = res.data.role || 'customer';
                 localStorage.setItem('username', username);
                 localStorage.setItem('role', role);
+                localStorage.setItem('loggedin', 'true');
                 
                 // Only play welcome music for customers
                 if (role !== 'admin') {

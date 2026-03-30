@@ -19,11 +19,11 @@ const Home = () => {
     const handleLogout = async () => {
         try {
             await axios.post('/api/logout');
-            localStorage.removeItem('username');
+            localStorage.clear();
             navigate('/login');
         } catch (error) {
             console.error('Logout failed', error);
-            localStorage.removeItem('username');
+            localStorage.clear();
             navigate('/login');
         }
     };
